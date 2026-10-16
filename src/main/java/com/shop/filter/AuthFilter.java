@@ -7,7 +7,11 @@ import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 
-@WebFilter({"/cart", "/addToCart", "/removeFromCart", "/checkout", "/payment", "/orderConfirmation"})
+@WebFilter({"/cart", "/addToCart", "/removeFromCart", "/updateCart",
+            "/checkout", "/payment", "/orderConfirmation",
+            "/myOrders",
+            "/wishlist", "/toggleWishlist",
+            "/addAddress", "/deleteAddress"})
 public class AuthFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)

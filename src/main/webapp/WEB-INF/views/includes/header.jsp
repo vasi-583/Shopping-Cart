@@ -22,7 +22,11 @@
       </c:when>
       <c:otherwise>
         <a href="${ctx}/products">Shop</a>
-        <a href="${ctx}/cart">Cart</a>
+        <c:if test="${not empty sessionScope.user}">
+          <a href="${ctx}/wishlist">Wishlist</a>
+          <a href="${ctx}/myOrders">My Orders</a>
+        </c:if>
+        <a href="${ctx}/cart">Cart<c:if test="${cartCount > 0}"><span class="cart-badge">${cartCount}</span></c:if></a>
       </c:otherwise>
     </c:choose>
     <c:choose>

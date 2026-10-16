@@ -20,7 +20,23 @@
             <c:out value="${i.productName}"/>
           </td>
           <td>&#8377;<fmt:formatNumber value="${i.price}" minFractionDigits="2"/></td>
-          <td>${i.quantity}</td>
+          <td>
+            <div class="qty">
+              <form method="post" action="${ctx}/updateCart">
+                <input type="hidden" name="cartId" value="${i.cartId}">
+                <input type="hidden" name="action" value="dec">
+                <button type="submit" class="qbtn" title="Decrease">&minus;</button>
+              </form>
+              <strong>${i.quantity}</strong>
+              <form method="post" action="${ctx}/updateCart">
+                <input type="hidden" name="cartId" value="${i.cartId}">
+                <input type="hidden" name="action" value="inc">
+                <button type="submit" class="qbtn" title="Increase"
+                        ${i.quantity >= i.stock ? 'disabled' : ''}>+</button>
+              </form>
+            </div>
+            <c:if test="${i.quantity >= i.stock}"><span class="muted">Max stock reached</span></c:if>
+          </td>
           <td>&#8377;<fmt:formatNumber value="${i.subtotal}" minFractionDigits="2"/></td>
           <td>
             <form method="post" action="${ctx}/removeFromCart">

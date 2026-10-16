@@ -11,7 +11,6 @@ public class CartService {
     private final CartDAO cartDAO = new CartDAO();
     private final ProductDAO productDAO = new ProductDAO();
 
-    /** False if product is missing or the stock limit would be exceeded. */
     public boolean add(int userId, int productId) {
         Product p = productDAO.findById(productId);
         if (p == null || p.getQuantity() <= 0) return false;
@@ -20,8 +19,11 @@ public class CartService {
         return true;
     }
 
-    public List<CartItem> getCart(int userId)      { return cartDAO.findByUser(userId); }
-    public void remove(int cartId, int userId)     { cartDAO.remove(cartId, userId); }
+    public List<CartItem> getCart(int userId)       { return cartDAO.findByUser(userId); }
+    public void remove(int cartId, int userId)      { cartDAO.remove(cartId, userId); }
+    public boolean increase(int cartId, int userId) { return cartDAO.increase(cartId, userId); }
+    public void decrease(int cartId, int userId)    { cartDAO.decrease(cartId, userId); }
+    public int count(int userId)                    { return cartDAO.countItems(userId); }
 
     public BigDecimal total(List<CartItem> items) {
         return items.stream().map(CartItem::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);

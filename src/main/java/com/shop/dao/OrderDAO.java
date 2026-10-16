@@ -9,8 +9,8 @@ import java.util.List;
 
 public class OrderDAO {
 
-    public int placeOrder(int userId, List<CartItem> items, BigDecimal total,
-                          String cardholder, String last4) {
+    public int placeOrder(int userId, List<CartItem> items, BigDecimal total, String cardholder, String last4,
+                          String shipName, String shipPhone, String shipAddress) {
         Connection c = null;
         try {
             c = DBConnection.getConnection();
@@ -18,10 +18,13 @@ public class OrderDAO {
 
             int orderId;
             try (PreparedStatement ps = c.prepareStatement(
-                    "INSERT INTO orders(user_id,total_amount,status) VALUES(?,?,'PAID')",
-                    Statement.RETURN_GENERATED_KEYS)) {
+                    "INSERT INTO orders(user_id,total_amount,status,ship_name,ship_phone,ship_address) "
+                  + "VALUES(?,?,'PLACED',?,?,?)", Statement.RETURN_GENERATED_KEYS)) {
                 ps.setInt(1, userId);
                 ps.setBigDecimal(2, total);
+                ps.setString(3, shipName);
+                ps.setString(4, shipPhone);
+                ps.setString(5, shipAddress);
                 ps.executeUpdate();
                 try (ResultSet k = ps.getGeneratedKeys()) {
                     k.next();
@@ -71,8 +74,57 @@ public class OrderDAO {
         }
     }
 
+    /** Admin status change in ONE transaction. On CANCELLED: stock restored, payment marked REFUNDED. */
+    public void updateStatus(int orderId, String newStatus) {
+        Connection c = null;
+        try {
+            c = DBConnection.getConnection();
+            c.setAutoCommit(false);
+
+            String current;
+            try (PreparedStatement ps = c.prepareStatement(
+                    "SELECT status FROM orders WHERE order_id=? FOR UPDATE")) {
+                ps.setInt(1, orderId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) throw new IllegalArgumentException("Order not found.");
+                    current = rs.getString(1);
+                }
+            }
+
+            if (!Order.nextStatuses(current).contains(newStatus))
+                throw new IllegalStateException("Cannot change status from " + current + " to " + newStatus + ".");
+
+            try (PreparedStatement ps = c.prepareStatement("UPDATE orders SET status=? WHERE order_id=?")) {
+                ps.setString(1, newStatus);
+                ps.setInt(2, orderId);
+                ps.executeUpdate();
+            }
+
+            if ("CANCELLED".equals(newStatus)) {
+                try (PreparedStatement restore = c.prepareStatement(
+                        "UPDATE products p JOIN order_items oi ON oi.product_id=p.product_id "
+                      + "SET p.quantity = p.quantity + oi.quantity WHERE oi.order_id=?")) {
+                    restore.setInt(1, orderId);
+                    restore.executeUpdate();
+                }
+                try (PreparedStatement refund = c.prepareStatement(
+                        "UPDATE payments SET payment_status='REFUNDED' WHERE order_id=?")) {
+                    refund.setInt(1, orderId);
+                    refund.executeUpdate();
+                }
+            }
+            c.commit();
+        } catch (SQLException | RuntimeException e) {
+            try { if (c != null) c.rollback(); } catch (SQLException ignored) { }
+            throw (e instanceof RuntimeException) ? (RuntimeException) e : new RuntimeException(e);
+        } finally {
+            try { if (c != null) { c.setAutoCommit(true); c.close(); } } catch (SQLException ignored) { }
+        }
+    }
+
     private List<Order> query(String where, Integer... params) {
-        String sql = "SELECT o.order_id,o.user_id,o.total_amount,o.order_date,o.status,u.name AS user_name,"
+        String sql = "SELECT o.order_id,o.user_id,o.total_amount,o.order_date,o.status,"
+                   + "o.ship_name,o.ship_phone,o.ship_address,u.name AS user_name,"
                    + "p.cardholder_name,p.card_last4,p.payment_status FROM orders o "
                    + "JOIN users u ON u.user_id=o.user_id "
                    + "LEFT JOIN payments p ON p.order_id=o.order_id " + where + " ORDER BY o.order_id DESC";
@@ -88,6 +140,9 @@ public class OrderDAO {
                     o.setTotalAmount(rs.getBigDecimal("total_amount"));
                     o.setOrderDate(rs.getTimestamp("order_date"));
                     o.setStatus(rs.getString("status"));
+                    o.setShipName(rs.getString("ship_name"));
+                    o.setShipPhone(rs.getString("ship_phone"));
+                    o.setShipAddress(rs.getString("ship_address"));
                     o.setCardholderName(rs.getString("cardholder_name"));
                     o.setCardLast4(rs.getString("card_last4"));
                     o.setPaymentStatus(rs.getString("payment_status"));
@@ -117,6 +172,10 @@ public class OrderDAO {
 
     public List<Order> findAll() {
         return query("");
+    }
+
+    public List<Order> findByUser(int userId) {
+        return query("WHERE o.user_id=?", userId);
     }
 
     public Order findForUser(int orderId, int userId) {

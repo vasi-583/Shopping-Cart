@@ -19,17 +19,9 @@ public class ValidationUtil {
     }
 
     /** Luhn check on digits only. */
+    /** Exactly 16 digits, no spaces. Any sequence is accepted (no Luhn check). */
     public static boolean isValidCard(String d) {
-        if (d == null || !d.matches("\\d{13,19}")) return false;
-        int sum = 0;
-        boolean alt = false;
-        for (int i = d.length() - 1; i >= 0; i--) {
-            int n = d.charAt(i) - '0';
-            if (alt) { n *= 2; if (n > 9) n -= 9; }
-            sum += n;
-            alt = !alt;
-        }
-        return sum % 10 == 0;
+        return d != null && d.matches("\\d{16}");
     }
 
     /** Expects MM/YY and must not be in the past. */

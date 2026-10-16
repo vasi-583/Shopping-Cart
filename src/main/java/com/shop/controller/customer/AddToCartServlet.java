@@ -21,6 +21,7 @@ public class AddToCartServlet extends HttpServlet {
         } catch (NumberFormatException e) {
             SessionUtil.flash(req, "Invalid product.");
         }
-        resp.sendRedirect(req.getContextPath() + "/products");
+        String back = "wishlist".equals(req.getParameter("back")) ? "/wishlist" : "/products";
+        resp.sendRedirect(req.getContextPath() + back);
     }
 }

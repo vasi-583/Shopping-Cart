@@ -5,6 +5,7 @@
 <h2>Products</h2>
 <div class="grid">
   <c:forEach var="p" items="${products}">
+    <c:set var="liked" value="${not empty wishlistIds and wishlistIds.contains(p.productId)}"/>
     <div class="card">
       <c:if test="${not empty p.imagePath}">
         <img src="<c:out value='${p.imagePath}'/>" alt="<c:out value='${p.name}'/>">
@@ -13,15 +14,22 @@
       <p class="muted"><c:out value="${p.category}"/></p>
       <p><c:out value="${p.description}"/></p>
       <p class="price">&#8377;<fmt:formatNumber value="${p.price}" minFractionDigits="2"/></p>
-      <c:choose>
-        <c:when test="${p.quantity > 0}">
-          <form method="post" action="${ctx}/addToCart">
-            <input type="hidden" name="productId" value="${p.productId}">
-            <button type="submit">Add to Cart</button>
-          </form>
-        </c:when>
-        <c:otherwise><span class="out">Out of stock</span></c:otherwise>
-      </c:choose>
+      <div class="card-actions">
+        <c:choose>
+          <c:when test="${p.quantity > 0}">
+            <form method="post" action="${ctx}/addToCart">
+              <input type="hidden" name="productId" value="${p.productId}">
+              <button type="submit">Add to Cart</button>
+            </form>
+          </c:when>
+          <c:otherwise><span class="out">Out of stock</span></c:otherwise>
+        </c:choose>
+        <form method="post" action="${ctx}/toggleWishlist">
+          <input type="hidden" name="productId" value="${p.productId}">
+          <input type="hidden" name="back" value="products">
+          <button type="submit" class="heart" title="${liked ? 'Remove from wishlist' : 'Add to wishlist'}">${liked ? '&#9829;' : '&#9825;'}</button>
+        </form>
+      </div>
     </div>
   </c:forEach>
 </div>
